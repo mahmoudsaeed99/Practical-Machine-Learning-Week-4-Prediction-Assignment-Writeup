@@ -1,0 +1,148 @@
+Practical Machine Learning Week-4 Assignment
+---
+title: "Untitled"
+author: "mahmoudsaeed"
+date: "9/6/2020"
+output: html_document
+---
+
+
+
+## Data Descriptions
+ The training data for this project are available here:
+
+ https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+ The test data are available here:
+
+ https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+The data for this project come from this source: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(randomForest)
+library(RColorBrewer)
+library(RGtk2)
+library(gbm)
+```
+
+## loading data
+```{r}
+train_url<- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+test_url<- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+training_data<- read.csv(url(train_url))
+testing_data<- read.csv(url(test_url))
+dim(training_data)
+```
+
+```{r}
+dim(testing_data)
+```
+## data cleansing
+```{r}
+nzv <- nearZeroVar(training_data)
+train_data <- training_data[,-nzv]
+test_data <- testing_data[,-nzv]
+dim(train_data)
+```
+
+```{r}
+dim(test_data)
+```
+```{r}
+na_val_col <- sapply(train_data, function(x) mean(is.na(x))) > 0.95
+train_data <- train_data[,na_val_col == FALSE]
+test_data <- test_data[,na_val_col == FALSE]
+
+dim(train_data)
+```
+
+```{r}
+dim(test_data)
+```
+
+```{r}
+train_data<- train_data[, 8:59]
+test_data<- test_data[, 8:59]
+dim(train_data)
+```
+
+```{r}
+dim(test_data)
+```
+
+
+## data partioning
+
+```{r}
+inTrain <- createDataPartition(y = train_data$classe ,p = 0.6 , list = F )
+training <- train_data[inTrain,]
+testing <- train_data[-inTrain,]
+```
+
+
+## construct the model using cross validation
+
+```{r}
+DT_model <- train(classe ~ . , data = training , method = "rpart")
+fancyRpartPlot(DT_model$finalModel)
+```
+
+
+```{r}
+set.seed(21243)
+DT_prediction <- predict(DT_model , testing)
+confusionMatrix(DT_prediction , testing$classe)
+```
+
+
+
+```{r}
+set.seed(26817)
+###Fit the model   
+RF_model<- train(classe ~. , data=training, method= "rf", ntree=100)
+###Prediction  
+RF_prediction<- predict(RF_model, testing)
+RF_cm<-confusionMatrix(RF_prediction, testing$classe)
+RF_cm
+```
+
+
+
+
+```{r}
+plot(RF_cm$table, col=RF_cm$byClass, main="Random Forest Accuracy")
+```
+
+```{r}
+set.seed(25621)
+gbm_model<- train(classe~., data=training, method="gbm", verbose= FALSE)
+gbm_model$finalmodel
+```
+
+```{r}
+gbm_prediction<- predict(gbm_model, testing)
+gbm_cm<-confusionMatrix(gbm_prediction, testing$classe)
+gbm_cm
+```
+
+
+```{r}
+RF_cm$overall
+```
+
+```{r}
+gbm_cm$overall
+```
+
+
+```{r}
+prediction_test<- predict(RF_model, test_data)
+prediction_test
+```
+
